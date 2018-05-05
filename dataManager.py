@@ -1,6 +1,7 @@
 from __future__ import division
 import os 
 import PyQt5
+
 import csv
 from openImagesReader import openImagesDataParser
 from objDetectVariables import bbox, boundingRect, category, image
@@ -9,7 +10,7 @@ import qtWrapperClasses
 
 
 #This programs directory
-currDir = dir_path = os.path.dirname(os.path.realpath(__file__))
+currDir = os.path.dirname(os.path.realpath(__file__))
 metaDataPath = currDir + "/data/data.metadata"
 
 
@@ -19,6 +20,7 @@ metaDataPath = currDir + "/data/data.metadata"
 class csvReader:
     
     def __init__(self):
+        
         return 
 
     #Returns bboxs from csvURL
@@ -66,6 +68,7 @@ class metaData:
         #self.setcsvwriter()
         self.createMetaData()
         self.convertCSVFiles()
+        
         return
         
     #Retrieves Images from folders, and stores them as meta data.
@@ -203,6 +206,7 @@ class dataManager:
         self.pathToTFLabels = self.currDir + "/data/labels.pbtxt"
         self.getCategoriesFromCVS(self.pathToLabel)
         self.createTfLabelsFile()
+        self.verifyImageAnnots()
 
     def getCategoriesFromCVS(self, cvsPath=None):
         del self._categories[:]

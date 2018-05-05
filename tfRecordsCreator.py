@@ -1,3 +1,4 @@
+from __future__ import division
 import tensorflow as tf
 import sys
 from io import BytesIO
@@ -8,13 +9,15 @@ from object_detection.utils import dataset_util
 import argparse
 from random import shuffle
 from resizeimage import resizeimage
+import PyQt5
 
 flags = tf.app.flags
 flags.DEFINE_string('output_path', '', '/home/ahmad/sda4/python/tensorFlow/objectDetection/data.record')
 FLAGS = flags.FLAGS 
-
 #This programs directory
 currDir = os.path.dirname(os.path.realpath(__file__))
+metaDataPath = currDir + "/data/data.metadata"
+
 class tfRecordsCreator:
     delim = ','
     destDir = None
@@ -27,13 +30,21 @@ class tfRecordsCreator:
 
 
     def openCSV(self, csvURL):
-        csvFile =  open(csvURL, 'r')
+        csvFile =  open(csvURL, mode='r')
         reader = csv.reader(csvFile, delimiter=self.delim)
         return reader    
 
+    def numImages(self):
+        i = 0
+        for row in self.openCSV(metaDataPath):
+            i = i + 1
+        return i
+
     #Resize Image is a boolean (0,1), whether to resize the image to 300x300 usually used by ssd's.
-    def storeTFRecords(self, resizeImage, tfRecordFilePath):
-        
+    def storeTFRecords(self, resizeImage, tfRecordFilePath, progressBar):
+        assert isinstance(progressBar, PyQt5.Qt.QProgressBar)
+        totalPics = self.numImages()
+
         metaData = currDir + "/data/data.metadata"
         #Create file if it doesn't exist.
         if not os.path.exists(tfRecordFilePath):
@@ -41,13 +52,34 @@ class tfRecordsCreator:
             f.close()
         writer = tf.python_io.TFRecordWriter(tfRecordFilePath)
         with open(metaData, mode='r') as f:
-            _csv = csv.reader(f, dialect='excel', delimiter=',')
+            _csv = csv.reader(f, dialect='excel', delimiter=self.delim)
+            i = 0
             for row in _csv:
-                data = self.getTFRecord(resizeImage, str(row[1]), str(row[2]))
-                writer.write(data.SerializeToString())
+                imageAnnotPath = str(row[2])
+                imagePath = str(row[1])
+                if not os.path.exists(imageAnnotPath):
+                    print("No annotation file found for " + imagePath)
+                    i = i + 1
+                    self.updateProgressBar(i,totalPics,progressBar)
+                    continue
+                data = self.getTFRecord(resizeImage, imagePath, imageAnnotPath)
+                if data is not None:
+                    writer.write(data.SerializeToString())
+                i = i + 1
+                self.updateProgressBar(i,totalPics,progressBar)
+
+                
+        progressBar.reset()
 
         writer.close()
     
+    def updateProgressBar(self, i, total, progressBar):
+        assert isinstance(progressBar, PyQt5.Qt.QProgressBar)
+        progress = float (i/total * 100)
+        print(progress)
+        progressBar.setValue(progress)
+        return
+
     #Gets tfRecord from a directory which contains images of a certian category.
     #Resize Image is a boolean (0,1), whether to resize the image to 300x300 usually used by ssd's.
     def getTFRecord(self, resizeImage,imagePath, imageInfoPath):
@@ -77,6 +109,9 @@ class tfRecordsCreator:
             classes_text.append(category.encode())
             classes.append(int(index))
         
+        if len(xmins) is 0:
+            print("No Image Annotations found for " + imagePath)
+            return None
         
         tfRecord  = self.createTFAnnot(resizeImage, category, imagePath,classes_text, classes, xmins, xmaxs, ymins, ymaxs)
         return tfRecord
@@ -138,53 +173,10 @@ class tfRecordsCreator:
         
         return imagePaths
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Testing arg")
-    parser.add_argument('Type', type=str, help='The type of data, validate(v) or train(t)')
-    parser.add_argument('DestDir', type=str, help='The destination directory for the tfrecord')
-    parser.add_argument('Classes', type=str, nargs='+', help='The classes we are searching for.')
-    args = parser.parse_args()
-
-    mode = args.Type
-    destDir = args.DestDir
-    classes = args.Classes
-    writer = tf.python_io.TFRecordWriter(destDir + "data300x300.record")
-    objDetectTF = oDTF(destDir)
-
-    dirs = []
-    tfRecords = []
-    for c in classes:
-        if mode == 'v':
-            #objDetectTF.storeDirTFRecord(c , BaseDirVal + c , writer)
-            tfData = objDetectTF.getDirTFRecordsFromDir(c, BaseDirVal + c)
-            #Shuffle the data every time we go to a different directory.
-            shuffle(tfData)
-            #Add the tfRecords from this directoy.
-            tfRecords.extend(tfData)
-
-            #dirs.append(BaseDirVal + c)
-        elif mode == 't':
-            #objDetectTF.storeDirTFRecord(c, BaseDir + c , writer)
-            tfData = objDetectTF.getDirTFRecordsFromDir(c, BaseDir + c)
-            shuffle(tfRecords)
-            tfRecords.extend(tfData)
-        else:
-            print("Invalid type.")
-    #Shuffle once more for good measure
-    shuffle(tfRecords)
-    shuffle(tfRecords)
-    dataCount = 0
-    for data in tfRecords:
-        writer.write(data.SerializeToString())
-        dataCount = dataCount + 1
-    print( "Wrote %s number of tfRecords." %(str(dataCount)))
-    writer.close()
-    
-if __name__ == '__main__':
-    #tf.app.run()
-    #main()
-    tfRC = tfRecordsCreator()
-    tfdir = currDir + "/tfRecords/tf.record"
-    print(tfdir)
-    tfRC.storeTFRecords(1, tfdir)
+# if __name__ == '__main__':
+#     #tf.app.run()
+#     #main()
+#     tfRC = tfRecordsCreator()
+#     tfdir = currDir + "/tfRecords/tf.record"
+#     print(tfdir)
+#     tfRC.storeTFRecords(1, tfdir)

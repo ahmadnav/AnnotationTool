@@ -18,10 +18,13 @@ class objDetectMainWindow(QtWidgets.QMainWindow, UI_MainWindow):
     imgprvlblClass = None
     imgListWidgetClass = None
     metaDataClass = metaData()
+    #Progress bar to indicate how many of the images have been tfRecorded.
+    tfRecordsprogressBar = None
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         UI_MainWindow.__init__(self)
+        
         
         #print(_bboxs[0].getCategory().getnumericId() + " Name " + _bboxs[0].getCategory().getName())
         
@@ -31,6 +34,7 @@ class objDetectMainWindow(QtWidgets.QMainWindow, UI_MainWindow):
         self.setupVars()
         self.setupUI()
         
+        
     
     #Sets up the required Variables.
     def setupVars(self):
@@ -38,6 +42,7 @@ class objDetectMainWindow(QtWidgets.QMainWindow, UI_MainWindow):
         self.prvPicLbl = self.imgprvlabel
         #Instantiations
         self.imgprvlblClass  = imgPreviewLbl(self.imgprvlabel)
+        self.tfRecordsprogressBar = self.tfRecordProgress
         
 
     #Sets up the ui buttons etc...
@@ -54,9 +59,14 @@ class objDetectMainWindow(QtWidgets.QMainWindow, UI_MainWindow):
         self.imgListWidgetClass = imgListWidget( self.imgListWidget, self.imgprvlblClass)
         self.imgListWidgetClass.displayImages()
 
+        assert isinstance(self.tfRecordsprogressBar, Qt.QProgressBar)
+        
+        self.tfRecordsprogressBar.reset()
+
         self.saveAnnotsBtn.clicked.connect(self.slotStoreAnnotPressed)
         self.rmvctgButton.clicked.connect(self.slotRmvCtgPressed)
         self.addctgButton.clicked.connect(self.slotAddCtgPressed)
+        self.createTfRecords.clicked.connect(self.slotStoreTFRecordsPressed)
         return
 
 
@@ -112,6 +122,10 @@ class objDetectMainWindow(QtWidgets.QMainWindow, UI_MainWindow):
         self.imgprvlblClass.addCtg(self.addCtglineEdit.text())
         return
 
+    def slotStoreTFRecordsPressed(self, event):
+        i = int(self.imgResize.isChecked())
+        print("Resizing Images " + str(i))
+        self.imgprvlblClass.storeTFRecords(i ,self.tfRecordsprogressBar)
 
 def main():
     

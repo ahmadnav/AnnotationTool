@@ -9,10 +9,14 @@ from dataManager import manager, csvReader, dataManager
 from objDetectVariables import boundingRect, bbox, annotationManager, category, image
 #import objDetectVariables as oDV
 import copy
+from tfRecordsCreator import tfRecordsCreator
 
 dmanager = dataManager()
 #Stores image file paths, and csv annot paths/names.
 metaDataFile = os.path.dirname(os.path.realpath(__file__)) + "/data/data.metadata"
+tfrecordsCreator = tfRecordsCreator()
+
+currDir = os.path.dirname(os.path.realpath(__file__))
 
 #This class is wrapper for Qcombobox and its corresponding bounding box + its own chosen category. 
 class Annotation(Qt.QComboBox, bbox):
@@ -151,7 +155,7 @@ class imgPreviewLbl:
         #self.previewPic(self.imageURL)
         
         assert isinstance(self.annotationManager, annotationManager)
-
+        
         return
 
     def onMouseClick(self, event):
@@ -341,6 +345,10 @@ class imgPreviewLbl:
 
     # Populates the current annot with the annotations.
     def fillAnnotManager(self, csvURL):
+        if not os.path.exists(csvURL):
+            #Create a url file if it doesn't exist for the image.
+            f = open(csvURL, 'w+')
+            f.close()
         width, height = self.currImage.size
         #Returns bboxs from csvURL's
         bboxs = csvReader.bboxFromCSV(csvURL, height, width)
@@ -376,3 +384,8 @@ class imgPreviewLbl:
 
     def addCtg(self, ctg):
         dmanager.addCtg(ctg)
+
+    #Creates tf annotations for the image
+    def storeTFRecords(self, resize, progressBar):
+        tfrecordsCreator.storeTFRecords(resize, currDir + "/tfRecords/tf.record", progressBar)
+        return
