@@ -6,7 +6,6 @@ from PIL import Image, ImageDraw
 import os, csv, base64
 from object_detection.utils import dataset_util
 import argparse
-import json
 from random import shuffle
 from resizeimage import resizeimage
 
